@@ -1,4 +1,5 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Result};
+use actix_web::{web, App, HttpResponse, HttpServer, Result, http::header};
+use actix_cors::Cors;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -182,12 +183,21 @@ async fn get_statistics(data: web::Data<Mutex<StudentManager>>) -> Result<HttpRe
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("Starting Student Management API server...");
-    println!("Server running at http://localhost:8080");
+    println!("Server running at http://localhost:3001");
     
     let student_manager = web::Data::new(Mutex::new(StudentManager::new()));
 
     HttpServer::new(move || {
+        // Configure CORS for each app instance
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:3000")
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+            .allowed_header(header::CONTENT_TYPE)
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .app_data(student_manager.clone())
             .service(
                 web::scope("/api")
@@ -199,7 +209,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/statistics", web::get().to(get_statistics))
             )
     })
-    .bind("127.0.0.1:8080")?
+    .bind("127.0.0.1:3001")?
     .run()
     .await
 }

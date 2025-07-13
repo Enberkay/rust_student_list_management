@@ -55,7 +55,7 @@ rust_student_list_management/
    cargo run
    ```
 
-The API server will start at `http://localhost:8080`
+The API server will start at `http://localhost:3001`
 
 ### Frontend Setup
 
