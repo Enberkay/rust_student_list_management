@@ -16,9 +16,21 @@ pub async fn establish_connection() -> Result<DatabaseConnection, Box<dyn std::e
 async fn create_tables(db: &DatabaseConnection) -> Result<(), Box<dyn std::error::Error>> {
     let schema = Schema::new(db.get_database_backend());
     
-    // Create users table
+    // Create users table if it doesn't exist
     let create_users_table = schema.create_table_from_entity(crate::models::Entity);
-    db.execute(db.get_database_backend().build(&create_users_table)).await?;
+    let sql = db.get_database_backend().build(&create_users_table);
+    
+    // Try to create table, ignore if already exists
+    match db.execute(sql).await {
+        Ok(_) => println!("Users table created successfully"),
+        Err(e) => {
+            if e.to_string().contains("already exists") {
+                println!("Users table already exists, skipping creation");
+            } else {
+                return Err(e.into());
+            }
+        }
+    }
     
     Ok(())
 } 

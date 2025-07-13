@@ -2,7 +2,7 @@ use actix_web::{dev::Payload, Error, FromRequest, HttpRequest};
 use actix_web::http::header::AUTHORIZATION;
 use futures::future::{ready, Ready};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, ConnectionTrait, ActiveModelTrait};
+use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, ConnectionTrait, ActiveModelTrait, ActiveValue::Set};
 use std::env;
 use bcrypt::{hash, verify, DEFAULT_COST};
 
@@ -64,23 +64,23 @@ impl AuthService {
         // Hash password
         let password_hash = Self::hash_password(&user_data.password)?;
 
-        // Create user
-        let user = UserModel {
-            id: 0, // Will be set by database
-            email: user_data.email,
-            password_hash,
-            role: role.as_str().to_string(),
-            created_at: chrono::Utc::now().into(),
-            updated_at: chrono::Utc::now().into(),
+        // Create user (do not set id)
+        let user_active = UserActiveModel {
+            email: Set(user_data.email),
+            password_hash: Set(password_hash),
+            role: Set(role.as_str().to_string()),
+            created_at: Set(chrono::Utc::now().into()),
+            updated_at: Set(chrono::Utc::now().into()),
+            ..Default::default()
         };
-
-        let user_active: UserActiveModel = user.clone().into();
         let result = UserEntity::insert(user_active).exec(db).await?;
         
-        Ok(UserModel {
-            id: result.last_insert_id,
-            ..user
-        })
+        // Query the inserted user
+        let user = UserEntity::find_by_id(result.last_insert_id)
+            .one(db)
+            .await?
+            .ok_or("User not found after insert")?;
+        Ok(user)
     }
 
     pub async fn get_current_user(
