@@ -24,6 +24,13 @@ impl Student {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct NewStudent {
+    name: String,
+    age: u8,
+    grade: f32,
+}
+
 struct StudentManager {
     students: HashMap<String, Student>,
 }
@@ -121,15 +128,15 @@ async fn get_student(
 }
 
 async fn create_student(
-    student: web::Json<Student>,
+    student: web::Json<NewStudent>,
     data: web::Data<Mutex<StudentManager>>,
 ) -> Result<HttpResponse> {
     let mut manager = data.lock().unwrap();
-    let mut new_student = student.into_inner();
-    new_student.id = Uuid::new_v4().to_string();
-    
-    manager.add_student(new_student.clone());
-    Ok(HttpResponse::Created().json(new_student))
+    let new_student = student.into_inner();
+    let student = Student::new(&new_student.name, new_student.age, new_student.grade);
+
+    manager.add_student(student.clone());
+    Ok(HttpResponse::Created().json(student))
 }
 
 async fn update_student(
