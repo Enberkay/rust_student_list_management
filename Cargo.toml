@@ -1,8 +1,0 @@
-[package]
-name = "rust_student_list_management"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-egui-macroquad = "0.15"
-
